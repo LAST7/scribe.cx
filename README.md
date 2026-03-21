@@ -1,3 +1,5 @@
+# THIS PROJECT IS CURRENTLY IN AN EARLY STAGE OF DEVELOPMENT
+
 # Scribe.cx
 
 Cross-browser web extension (Chrome + Firefox) for summarizing/extracting information from the current page via an LLM.
@@ -84,13 +86,6 @@ Declared in `wxt.config.ts`:
 - `sidePanel` (Chrome side panel API)
 - `storage` (persist endpoint/key + conversation)
 - `activeTab` (intended for reading the current tab when page extraction is implemented)
-
-## Project Layout
-
-- Side panel UI: `src/entrypoints/sidepanel/`
-- Background entry: `src/entrypoints/background.ts`
-- Content script (currently stub): `src/entrypoints/content.ts`
-- Cross-browser panel abstraction: `src/utils/sidepanel.ts`
 
 ## Next Steps (Ideas)
 
