@@ -1,0 +1,107 @@
+<script lang="ts">
+    import { tick } from "svelte";
+
+    import type { MessageFeed } from "@/types";
+    import { logger } from "@/utils/logger";
+
+    interface Props {
+        messageFeed: MessageFeed[];
+        isStreaming: boolean;
+        class?: string;
+    }
+
+    let { messageFeed, isStreaming, class: className = "" }: Props = $props();
+    let viewport: HTMLElement | undefined = $state();
+
+    // Automatically scroll to bottom when new message arrives
+    $effect(() => {
+        // Q: maybe check last message's id instead of the message itself?
+        // TODO: don't update when message feed is not loaded, aka null
+        const lastMessage = messageFeed[messageFeed.length - 1];
+        const lastMessageContent = lastMessage?.content;
+        if (lastMessageContent === undefined) return;
+
+        tick().then(() => {
+            if (viewport === undefined) {
+                logger.error(
+                    "Chat viewport binding failed. Autoscrolling disabled."
+                );
+                return;
+            }
+
+            // TODO: make it an item in preference
+            const threshold = 200;
+            const isAtBottom =
+                viewport.scrollHeight -
+                    viewport.clientHeight -
+                    viewport.scrollTop <
+                threshold;
+
+            // SHIT: this is ugly
+            // Do not scroll down when user is navigating upper messages
+            if (
+                !isAtBottom &&
+                lastMessage.role !== "user" &&
+                lastMessage.content !== "fetching response..."
+            )
+                return;
+
+            // UGLY: this is going to output hundreds of logs to the console
+            logger.debug(
+                `MessageFeed change detected, scrolling. Behavior: ${isStreaming ? "instant" : "smooth"}`
+            );
+            viewport.scrollTo({
+                top: viewport.scrollHeight,
+                behavior: isStreaming ? "instant" : "smooth"
+            });
+        });
+    });
+</script>
+
+{#snippet ChatBubble(bubble: MessageFeed)}
+    <div
+        class="flex w-full gap-3 {bubble.role === 'user'
+            ? 'flex-row-reverse'
+            : 'flex-row'}">
+        <!-- avatar -->
+        <div class="shrink-0">
+            <div
+                class="size-10 rounded-full bg-surface-500/20 flex items-center justify-center border border-surface-500/30">
+                {bubble.role === "user" ? "U" : "AI"}
+            </div>
+        </div>
+
+        <div
+            class="flex flex-col max-w-[80%] {bubble.role === 'user'
+                ? 'items-end'
+                : 'items-start'}">
+            <!-- timestamp & username -->
+            <div
+                class="flex items-center gap-2 mb-1 {bubble.role === 'user'
+                    ? 'flex-row-reverse'
+                    : 'flex-row'}">
+                <span class="text-sm font-bold">{bubble.name}</span>
+                <span class="text-[10px] opacity-40">{bubble.timestamp}</span>
+            </div>
+            <!-- message -->
+            <div
+                class="card rounded-xl p-3 shadow-sm space-y-2
+                {bubble.role === 'user'
+                    ? 'preset-filled-primary-500 rounded-tr-none text-white'
+                    : `preset-tonal rounded-tl-none ${bubble.color}`}">
+                <!-- whitespace-pre-wrap for LLM multi-line responses -->
+                <p
+                    class="prose-invert text-sm leading-relaxed whitespace-pre-wrap">
+                    {bubble.content}
+                </p>
+            </div>
+        </div>
+    </div>
+{/snippet}
+
+<!-- TODO: Render something when messageFeed is null or empty -->
+<section bind:this={viewport} class="{className} px-2 space-y-4">
+    {#each messageFeed as bubble (bubble.id)}
+        {@render ChatBubble(bubble)}
+    {/each}
+</section>
