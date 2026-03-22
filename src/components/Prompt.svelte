@@ -1,10 +1,10 @@
 <script lang="ts">
+    import type { LLMResponseState } from "@/types";
     import { SendIcon } from "@lucide/svelte";
 
     interface Props {
-        addMessage: (role: "user" | "assistant", message: string) => void;
-        streamMessage: (chunk: string) => void;
-        isStreaming: boolean;
+        onPromptSubmit: (userMessage: string) => void;
+        LLMResponse: LLMResponseState;
         class?: string;
     }
 
@@ -13,17 +13,20 @@
     let textareaRef: HTMLTextAreaElement;
 
     let {
-        addMessage,
-        streamMessage,
-        isStreaming = $bindable(),
+        onPromptSubmit,
+        LLMResponse,
         class: className = ""
     }: Props = $props();
+
     let currentMessage = $state("");
 
-    function handleInput(e: Event) {
-        const target = e.target as HTMLTextAreaElement;
-        target.style.height = "auto";
-        target.style.height = `${target.scrollHeight}px`;
+    /**
+     * Adjust textarea UI to show full input text
+     */
+    function adjustUI() {
+        textareaRef.style.height = "auto";
+        // TODO: set a maximum height
+        textareaRef.style.height = `${textareaRef.scrollHeight}px`;
     }
 
     function onKeydown(e: KeyboardEvent) {
@@ -38,7 +41,10 @@
     }
 
     async function handleSubmit() {
-        const userMessage = currentMessage;
+        // TODO: what to do with "error" phase?
+        if (LLMResponse.phase !== "idle") return;
+
+        const userMessage = currentMessage.trim();
         // Clear prompt
         currentMessage = "";
 
@@ -48,21 +54,7 @@
         if (textareaRef) textareaRef.style.height = "auto";
         // TODO: update Prompt.svelte UI style to prevent user input during LLM request
 
-        addMessage("user", userMessage);
-
-        // placeholder
-        addMessage("assistant", "fetching response...");
-
-        // isStreaming = true;
-        try {
-            await callLLM(userMessage, streamMessage);
-        } catch (err: unknown) {
-            logger.error(err);
-        } finally {
-            isStreaming = false;
-        }
-
-        // TODO: Store setValue
+        onPromptSubmit(userMessage);
     }
 </script>
 
@@ -74,7 +66,7 @@
             bind:this={textareaRef}
             bind:value={currentMessage}
             name="prompt"
-            oninput={handleInput}
+            oninput={adjustUI}
             onkeydown={onKeydown}
             rows="1"
             placeholder="Write a message..."

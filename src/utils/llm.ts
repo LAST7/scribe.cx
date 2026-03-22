@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
-import { MessageFeed } from "@/types";
+import { LLMCallback, MessageFeed } from "@/types";
 import {
     CurrentConversationStorage,
     LLMKeyStorage,
@@ -9,10 +9,7 @@ import {
 } from "@/utils/storage";
 import { logger } from "./logger";
 
-export async function callLLM(
-    userPrompt: string,
-    streamMessage: (chunk: string) => void
-) {
+export async function callLLM(userPrompt: string, callback: LLMCallback) {
     // TODO: should validate data
     // Q: should these data be passed in as parameters rather than getting them from WXT-Storage?
     const apiKey: string = await LLMKeyStorage.getValue();
@@ -47,15 +44,22 @@ export async function callLLM(
     logger.debug(`Calling LLM API: ${endPoint} with key: ${apiKey}`);
 
     // LLM API integration
-    const stream = await client.chat.completions.create({
-        model: "gpt-5.4-mini",
-        messages: completeContext,
-        stream: true
-    });
+    try {
+        const stream = await client.chat.completions.create({
+            model: "gpt-5.4-mini",
+            messages: completeContext,
+            stream: true
+        });
 
-    // update message with LLM stream response
-    for await (const chunk of stream) {
-        const chunkContent = chunk.choices[0]?.delta?.content || "";
-        if (chunkContent) streamMessage(chunkContent);
+        // update message with LLM stream response
+        for await (const chunk of stream) {
+            const chunkContent = chunk.choices[0]?.delta?.content || "";
+            if (chunkContent) callback.onStream(chunkContent);
+        }
+
+        callback.onDone();
+    } catch (error) {
+        callback.onError(String(error));
+        throw error;
     }
 }

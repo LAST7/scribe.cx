@@ -1,30 +1,38 @@
 <script lang="ts">
     import { tick } from "svelte";
 
-    import type { MessageFeed } from "@/types";
+    import type { LLMResponseState, MessageFeed } from "@/types";
+
+    import AssistantPlaceholder from "@/components/AssistantPlaceholder.svelte";
     import { logger } from "@/utils/logger";
 
     interface Props {
         messageFeed: MessageFeed[];
-        isStreaming: boolean;
+        LLMResponse: LLMResponseState;
         class?: string;
     }
 
-    let { messageFeed, isStreaming, class: className = "" }: Props = $props();
+    let { messageFeed, LLMResponse, class: className = "" }: Props = $props();
     let viewport: HTMLElement | undefined = $state();
 
     // Automatically scroll to bottom when new message arrives
+    // Q: Is it a good idea to put it here and detect changes of `messageFeed`?
+    // Is there a better way? Like trigger scrolling via the send button click?
     $effect(() => {
         // Q: maybe check last message's id instead of the message itself?
-        // TODO: don't update when message feed is not loaded, aka null
         const lastMessage = messageFeed[messageFeed.length - 1];
         const lastMessageContent = lastMessage?.content;
-        if (lastMessageContent === undefined) return;
+
+        // No message
+        if (!lastMessage) return;
+
+        // Q: Is this necessary?
+        if (!lastMessageContent && LLMResponse.phase !== "pending") return;
 
         tick().then(() => {
             if (viewport === undefined) {
                 logger.error(
-                    "Chat viewport binding failed. Autoscrolling disabled."
+                    "Chat viewport binding failed. Autoscrolling aborted."
                 );
                 return;
             }
@@ -37,24 +45,24 @@
                     viewport.scrollTop <
                 threshold;
 
-            // SHIT: this is ugly
             // Do not scroll down when user is navigating upper messages
-            if (
-                !isAtBottom &&
-                lastMessage.role !== "user" &&
-                lastMessage.content !== "fetching response..."
-            )
-                return;
+            if (!isAtBottom && lastMessage.role !== "user") return;
 
             // UGLY: this is going to output hundreds of logs to the console
-            logger.debug(
-                `MessageFeed change detected, scrolling. Behavior: ${isStreaming ? "instant" : "smooth"}`
-            );
+            // logger.debug(
+            //     `MessageFeed change detected, scrolling. Behavior: ${isStreaming ? "instant" : "smooth"}`
+            // );
+            // QUESTION: `smooth` behavior does not seem to be problemsome?
             viewport.scrollTo({
                 top: viewport.scrollHeight,
-                behavior: isStreaming ? "instant" : "smooth"
+                behavior:
+                    LLMResponse.phase === "streaming" ? "instant" : "smooth"
             });
         });
+
+        // TODO: store message feed?
+        // Update of messageFeed is very frequent when streaming,
+        // thus this might not be a good place to store message
     });
 </script>
 
@@ -80,7 +88,8 @@
                 class="flex items-center gap-2 mb-1 {bubble.role === 'user'
                     ? 'flex-row-reverse'
                     : 'flex-row'}">
-                <span class="text-sm font-bold">{bubble.name}</span>
+                <!-- TODO: username & model name -->
+                <span class="text-sm font-bold">Username</span>
                 <span class="text-[10px] opacity-40">{bubble.timestamp}</span>
             </div>
             <!-- message -->
@@ -88,7 +97,7 @@
                 class="card rounded-xl p-3 shadow-sm space-y-2
                 {bubble.role === 'user'
                     ? 'preset-filled-primary-500 rounded-tr-none text-white'
-                    : `preset-tonal rounded-tl-none ${bubble.color}`}">
+                    : `preset-tonal rounded-tl-none`}">
                 <!-- whitespace-pre-wrap for LLM multi-line responses -->
                 <p
                     class="prose-invert text-sm leading-relaxed whitespace-pre-wrap">
@@ -104,4 +113,7 @@
     {#each messageFeed as bubble (bubble.id)}
         {@render ChatBubble(bubble)}
     {/each}
+    {#if LLMResponse.phase === "pending" && !messageFeed.some((m) => m.id === LLMResponse.messageId)}
+        <AssistantPlaceholder />
+    {/if}
 </section>

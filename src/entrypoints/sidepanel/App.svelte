@@ -1,54 +1,104 @@
 <script lang="ts">
-    import type { MessageFeed } from "@/types";
+    import { storage } from "wxt/utils/storage";
 
-    import { getCurrentTimestamp } from "@/utils";
+    import type { LLMResponseState, MessageFeed } from "@/types";
 
     import Header from "@/components/Header.svelte";
     import Chat from "@/components/Chat.svelte";
     import Prompt from "@/components/Prompt.svelte";
 
+    import { createMessage } from "@/utils";
+    import { logger } from "@/utils/logger";
+    import { callLLM } from "@/utils/llm";
+
     // Messages
     let messageFeed: Array<MessageFeed> = $state([]);
-    let isStreaming: boolean = $state(false);
+    // LLM response status
+    let LLMResponse: LLMResponseState = $state({
+        phase: "idle",
+        messageId: "",
+        error: ""
+    });
 
     // TODO: should monitor and respond to changes in `local:cur_conversation`
     // messageFeed is `null` at first initialization of mock data
+    // Q: `unknown`? How to validate this? zod?
+    // FIXME: could cause race condition when storage resolves after user submition
     storage.getItem("local:cur_conversation").then((val: unknown) => {
         messageFeed = val as Array<MessageFeed>;
     });
 
-    function addMessage(role: "user" | "assistant", message: string) {
-        // UGLY: this is ugly
-        if (role === "user" && message === "") return;
+    /**
+     * Submits a user prompt and manages the LLM streaming response lifecycle.
+     *
+     * @param userMessage - The user's input text to send to the LLM.
+     * @returns A promise that resolves when the LLM request setup and streaming lifecycle completes.
+     */
+    async function onPromptSubmit(userMessage: string) {
+        if (LLMResponse.phase !== "idle") return;
 
-        const newMessage: MessageFeed = {
-            id: messageFeed.length.toString(),
-            role,
-            // TODO: model name & proper timestamp
-            name: "Jane",
-            timestamp: `Today @ ${getCurrentTimestamp()}`,
-            content: message
+        if (userMessage === "") return;
+
+        messageFeed = [
+            ...messageFeed,
+            createMessage(crypto.randomUUID(), "user", userMessage)
+        ];
+
+        LLMResponse = {
+            phase: "pending",
+            messageId: crypto.randomUUID(),
+            error: ""
         };
-        // Update the message feed
-        messageFeed = [...messageFeed, newMessage];
+
+        // UGLY: defining lambda function here is somewhat ugly
+        try {
+            await callLLM(userMessage, {
+                onStream: (chunk: string) => {
+                    streamMessage(LLMResponse.messageId, chunk);
+                },
+                onDone: () => {
+                    LLMResponse.phase = "idle";
+                    LLMResponse.messageId = "";
+                    LLMResponse.error = "";
+                },
+                onError: (error: string) => {
+                    LLMResponse.phase = "error";
+                    LLMResponse.error = error;
+                    // TODO: render error message
+                    // TODO: error handling, how do we restore from error state?
+                    // Q: where to trigger the render?
+                }
+            });
+        } catch (err: unknown) {
+            logger.error(err);
+        }
     }
 
     /**
-     * update the last message in `messageFeed` by adding `chunk` to its content
+     * @param messageId the target message feed reserved for LLM response
+     * @param chunk new arrived chunk ready for streaming
+     *
+     * @description update message with id `messageId` in `messageFeed` by adding `chunk` to its content
      */
-    function streamMessage(chunk: string) {
-        const lastMessage = messageFeed[messageFeed.length - 1];
-        if (lastMessage.role !== "assistant") {
-            logger.error("Streaming message into non-assistant message!");
+    function streamMessage(messageId: string, chunk: string) {
+        if (messageId === "") {
+            logger.error("No target message to stream");
             return;
         }
 
-        // SHIT: this is ugly
-        // Maybe a special type of message should be allowed inside `messageFeed`? -- Even uglier.
-        if (lastMessage.content === "fetching response...")
-            lastMessage.content = "";
+        let targetMessage = messageFeed.find(
+            (m: MessageFeed) => m.id === messageId
+        );
 
-        lastMessage.content += chunk;
+        if (!targetMessage) {
+            targetMessage = createMessage(messageId, "assistant", "");
+            messageFeed = [...messageFeed, targetMessage];
+            LLMResponse.phase = "streaming";
+        }
+
+        // FIXME: it does work, but replacing by id is better
+        // Q: why does it work?
+        targetMessage.content += chunk;
     }
 </script>
 
@@ -56,11 +106,10 @@
     <Header />
     <Chat
         {messageFeed}
-        {isStreaming}
+        {LLMResponse}
         class="flex-1 overflow-y-auto overflow-x-hidden z-10 pb-40" />
     <Prompt
-        {addMessage}
-        {streamMessage}
-        bind:isStreaming
+        {onPromptSubmit}
+        {LLMResponse}
         class="absolute z-10 bottom-0 w-full bg-transparent pointer-events-none" />
 </div>
