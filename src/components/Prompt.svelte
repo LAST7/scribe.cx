@@ -24,9 +24,14 @@
      * Adjust textarea UI to show full input text
      */
     function adjustUI() {
+        if (!textareaRef) {
+            logger.error(
+                " textareaRef is undefined, unable to reset textarea height. "
+            );
+            return;
+        }
         textareaRef.style.height = "auto";
-        // TODO: set a maximum height
-        textareaRef.style.height = `${textareaRef.scrollHeight}px`;
+        textareaRef.style.height = `${textareaRef.scrollHeight <= 500 ? textareaRef.scrollHeight : 500}px`;
     }
 
     function onKeydown(e: KeyboardEvent) {
@@ -48,10 +53,13 @@
         // Clear prompt
         currentMessage = "";
 
-        // Restore form height
-        textareaRef.style.height = "auto";
+        if (!textareaRef) {
+            logger.error(
+                " textareaRef is undefined, unable to reset textarea height. "
+            );
+        }
         // reset height after message sent
-        if (textareaRef) textareaRef.style.height = "auto";
+        textareaRef.style.height = "auto";
         // TODO: update Prompt.svelte UI style to prevent user input during LLM request
 
         onPromptSubmit(userMessage);
