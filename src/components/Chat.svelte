@@ -7,12 +7,12 @@
     import { logger } from "@/utils/logger";
 
     interface Props {
-        messageFeed: MessageFeed[];
+        messages: Array<MessageFeed>;
         LLMResponse: LLMResponseState;
         class?: string;
     }
 
-    let { messageFeed, LLMResponse, class: className = "" }: Props = $props();
+    let { messages, LLMResponse, class: className = "" }: Props = $props();
     let viewport: HTMLElement | undefined = $state();
 
     // Automatically scroll to bottom when new message arrives
@@ -20,7 +20,7 @@
     // Is there a better way? Like trigger scrolling via the send button click?
     $effect(() => {
         // Q: maybe check last message's id instead of the message itself?
-        const lastMessage = messageFeed[messageFeed.length - 1];
+        const lastMessage = messages[messages.length - 1];
         const lastMessageContent = lastMessage?.content;
 
         // No message
@@ -59,10 +59,6 @@
                     LLMResponse.phase === "streaming" ? "instant" : "smooth"
             });
         });
-
-        // TODO: store message feed?
-        // Update of messageFeed is very frequent when streaming,
-        // thus this might not be a good place to store message
     });
 </script>
 
@@ -110,10 +106,10 @@
 
 <!-- TODO: Render something when messageFeed is null or empty -->
 <section bind:this={viewport} class="{className} px-2 space-y-4">
-    {#each messageFeed as bubble (bubble.id)}
+    {#each messages as bubble (bubble.id)}
         {@render ChatBubble(bubble)}
     {/each}
-    {#if LLMResponse.phase === "pending" && !messageFeed.some((m) => m.id === LLMResponse.messageId)}
+    {#if LLMResponse.phase === "pending" && !messages.some((m) => m.id === LLMResponse.messageId)}
         <AssistantPlaceholder />
     {/if}
 </section>

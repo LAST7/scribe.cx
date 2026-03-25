@@ -1,25 +1,15 @@
 import OpenAI from "openai";
 
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
-import { LLMCallback, MessageFeed } from "@/types";
-import {
-    CurrentConversationStorage,
-    LLMKeyStorage,
-    LLMProviderEndpoint
-} from "@/utils/storage";
+import { CallLLMParams } from "@/types";
+
 import { logger } from "./logger";
 
-export async function callLLM(userPrompt: string, callback: LLMCallback) {
-    // TODO: should validate data
-    // Q: should these data be passed in as parameters rather than getting them from WXT-Storage?
-    const apiKey: string = await LLMKeyStorage.getValue();
-    const chatHistory: Array<MessageFeed> =
-        await CurrentConversationStorage.getValue();
-    const endPoint: string = await LLMProviderEndpoint.getValue();
-
+export async function callLLM(params: CallLLMParams) {
+    // TODO: params validation
     const client = new OpenAI({
-        baseURL: endPoint,
-        apiKey,
+        baseURL: params.endpoint,
+        apiKey: params.apiKey,
         // Q: wtf is this? why is it needed?
         dangerouslyAllowBrowser: true
     });
@@ -28,25 +18,28 @@ export async function callLLM(userPrompt: string, callback: LLMCallback) {
 
     // SHIT: This is shit.
     // Should maintain a simpler array of messages without unnecessary attributes.
-    const messages: Array<ChatCompletionMessageParam> = chatHistory.map(
-        (m) =>
-            ({
-                role: m.role,
-                content: m.content
-            }) as ChatCompletionMessageParam
-    );
+    const messages: Array<ChatCompletionMessageParam> =
+        params.conversation.messages.map(
+            (m) =>
+                ({
+                    role: m.role,
+                    content: m.content
+                }) as ChatCompletionMessageParam
+        );
 
     const completeContext: Array<ChatCompletionMessageParam> = [
         ...messages,
-        { role: "user", content: userPrompt }
+        { role: "user", content: params.userPrompt }
     ];
 
-    logger.debug(`Calling LLM API: ${endPoint} with key: ${apiKey}`);
+    logger.debug(
+        `Calling LLM API: ${params.endpoint} with key: ${params.apiKey}`
+    );
 
     // LLM API integration
     try {
         const stream = await client.chat.completions.create({
-            model: "gpt-5.4-mini",
+            model: params.modelName,
             messages: completeContext,
             stream: true
         });
@@ -54,12 +47,12 @@ export async function callLLM(userPrompt: string, callback: LLMCallback) {
         // update message with LLM stream response
         for await (const chunk of stream) {
             const chunkContent = chunk.choices[0]?.delta?.content || "";
-            if (chunkContent) callback.onStream(chunkContent);
+            if (chunkContent) params.callback.onStream(chunkContent);
         }
 
-        callback.onDone();
+        params.callback.onDone();
     } catch (error) {
-        callback.onError(String(error));
+        params.callback.onError(String(error));
         throw error;
     }
 }

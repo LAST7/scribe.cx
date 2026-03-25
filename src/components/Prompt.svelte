@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { LLMResponseState } from "@/types";
-    import { SendIcon } from "@lucide/svelte";
+    import { CornerRightUp } from "@lucide/svelte";
 
     interface Props {
         onPromptSubmit: (userMessage: string) => void;
@@ -50,6 +50,10 @@
         if (LLMResponse.phase !== "idle") return;
 
         const userMessage = currentMessage.trim();
+        if (userMessage === "") {
+            logger.warn("Can not submit empty prompt.");
+            return;
+        }
         // Clear prompt
         currentMessage = "";
 
@@ -98,12 +102,12 @@
 
             <!-- Send Button -->
             <button
-                class="btn m-1 transition-all {currentMessage.trim()
+                class="btn m-2 transition-all {currentMessage.trim()
                     ? 'preset-filled-primary-500 scale-100'
                     : 'preset-tonal scale-95 opacity-50'}"
                 disabled={!currentMessage.trim()}
                 onclick={handleSubmit}>
-                <SendIcon class="size-6" />
+                <CornerRightUp class="size-6" />
             </button>
             <!-- TODO: Stop Button -->
         </div>

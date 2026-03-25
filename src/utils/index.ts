@@ -1,4 +1,4 @@
-import { MessageFeed } from "@/types";
+import { MessageFeed, UUID } from "@/types";
 
 export function getCurrentTimestamp(): string {
     return new Date().toLocaleString("en-US", {
@@ -9,7 +9,7 @@ export function getCurrentTimestamp(): string {
 }
 
 export function createMessage(
-    messageId: string,
+    messageId: UUID,
     role: "user" | "assistant",
     content: string
 ): MessageFeed {
