@@ -81,24 +81,25 @@
      * @description update message with id `messageId` in `messageFeed` by adding `chunk` to its content
      */
     function streamMessage(messageId: string, chunk: string) {
-        if (messageId === "") {
+        if (!messageId) {
             logger.error("No target message to stream");
             return;
         }
 
-        let targetMessage = messageFeed.find(
+        const index = messageFeed.findIndex(
             (m: MessageFeed) => m.id === messageId
         );
 
-        if (!targetMessage) {
-            targetMessage = createMessage(messageId, "assistant", "");
-            messageFeed = [...messageFeed, targetMessage];
+        if (index === -1) {
+            const newMessage = createMessage(messageId, "assistant", chunk);
+            messageFeed = [...messageFeed, newMessage];
             LLMResponse.phase = "streaming";
+            return;
         }
 
-        // FIXME: it does work, but replacing by id is better
-        // Q: why does it work?
-        targetMessage.content += chunk;
+        messageFeed[index].content += chunk;
+        // just in case
+        messageFeed = [...messageFeed];
     }
 </script>
 
