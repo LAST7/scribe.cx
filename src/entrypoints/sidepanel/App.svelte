@@ -95,11 +95,10 @@
             createMessage(crypto.randomUUID(), "user", userPrompt)
         ];
 
-        // TODO: placeholder message
-
+        const messageId: UUID = crypto.randomUUID();
         LLMResponse = {
             phase: "pending",
-            messageId: crypto.randomUUID(),
+            messageId,
             error: ""
         };
 
@@ -110,6 +109,10 @@
             logger.error("Incomplete LLM config: ", LLMConfig);
             return;
         }
+
+        // placeholder message
+        const newMessage = createMessage(messageId, "assistant", "");
+        curConversation.messages = [...curConversation.messages, newMessage];
 
         try {
             await callLLM({
@@ -141,17 +144,13 @@
             (m: MessageFeed) => m.id === messageId
         );
 
-        // REFACTOR: placeholder message
         if (index === -1) {
-            const newMessage = createMessage(messageId, "assistant", chunk);
-            curConversation.messages = [
-                ...curConversation.messages,
-                newMessage
-            ];
-            LLMResponse.phase = "streaming";
+            logger.error("target messageId does not exist: ", messageId);
             return;
         }
 
+        LLMResponse.phase = "streaming";
+        // NOTE: requires svelte 5 deep state
         curConversation.messages[index].content += chunk;
     }
 </script>

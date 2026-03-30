@@ -107,9 +107,10 @@
 <!-- TODO: Render something when messageFeed is null or empty -->
 <section bind:this={viewport} class="{className} px-2 space-y-4">
     {#each messages as bubble (bubble.id)}
-        {@render ChatBubble(bubble)}
+        {#if LLMResponse.phase === "pending" && bubble.id === LLMResponse.messageId}
+            <AssistantPlaceholder />
+        {:else}
+            {@render ChatBubble(bubble)}
+        {/if}
     {/each}
-    {#if LLMResponse.phase === "pending" && !messages.some((m) => m.id === LLMResponse.messageId)}
-        <AssistantPlaceholder />
-    {/if}
 </section>
