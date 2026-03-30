@@ -1,8 +1,8 @@
 import { storage } from "wxt/utils/storage";
 
-import { LLMConfigStorage } from "@/types";
+import { LLMConfig } from "@/types";
 
-export const LLMConfig = storage.defineItem<LLMConfigStorage, {}>(
+export const LLMConfigStorage = storage.defineItem<LLMConfig, {}>(
     "local:llm_config",
     {
         fallback: {

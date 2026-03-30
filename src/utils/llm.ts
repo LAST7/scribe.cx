@@ -16,16 +16,14 @@ export async function callLLM(params: CallLLMParams) {
 
     // Construct complete context including former user & LLM messages
 
-    // SHIT: This is shit.
-    // Should maintain a simpler array of messages without unnecessary attributes.
-    const messages: Array<ChatCompletionMessageParam> =
-        params.conversation.messages.map(
-            (m) =>
-                ({
-                    role: m.role,
-                    content: m.content
-                }) as ChatCompletionMessageParam
-        );
+    // UGLY: Should maintain a simpler array of messages without unnecessary attributes?
+    const messages: Array<ChatCompletionMessageParam> = params.chatHistory.map(
+        (m) =>
+            ({
+                role: m.role,
+                content: m.content
+            }) as ChatCompletionMessageParam
+    );
 
     const completeContext: Array<ChatCompletionMessageParam> = [
         ...messages,

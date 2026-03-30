@@ -8,12 +8,18 @@
 
     interface Props {
         messages: Array<MessageFeed>;
-        LLMResponse: LLMResponseState;
+        llmResponse: LLMResponseState;
+        modelName?: string;
         class?: string;
     }
 
-    let { messages, LLMResponse, class: className = "" }: Props = $props();
-    let viewport: HTMLElement | undefined = $state();
+    let {
+        messages,
+        llmResponse,
+        modelName = "LLM",
+        class: className = ""
+    }: Props = $props();
+    let viewport: HTMLElement | null = $state(null);
 
     // Automatically scroll to bottom when new message arrives
     // Q: Is it a good idea to put it here and detect changes of `messageFeed`?
@@ -27,10 +33,10 @@
         if (!lastMessage) return;
 
         // Q: Is this necessary?
-        if (!lastMessageContent && LLMResponse.phase !== "pending") return;
+        if (!lastMessageContent && llmResponse.phase !== "pending") return;
 
         tick().then(() => {
-            if (viewport === undefined) {
+            if (!viewport) {
                 logger.error(
                     "Chat viewport binding failed. Autoscrolling aborted."
                 );
@@ -56,7 +62,7 @@
             viewport.scrollTo({
                 top: viewport.scrollHeight,
                 behavior:
-                    LLMResponse.phase === "streaming" ? "instant" : "smooth"
+                    llmResponse.phase === "streaming" ? "instant" : "smooth"
             });
         });
     });
@@ -84,8 +90,12 @@
                 class="flex items-center gap-2 mb-1 {bubble.role === 'user'
                     ? 'flex-row-reverse'
                     : 'flex-row'}">
-                <!-- TODO: username & model name -->
-                <span class="text-sm font-bold">Username</span>
+                {#if bubble.role === "user"}
+                    <!-- TODO: username -->
+                    <span class="text-sm font-bold">Username</span>
+                {:else}
+                    <span class="text-sm font-bold">{modelName}</span>
+                {/if}
                 <span class="text-[10px] opacity-40">{bubble.timestamp}</span>
             </div>
             <!-- message -->
@@ -107,7 +117,7 @@
 <!-- TODO: Render something when messageFeed is null or empty -->
 <section bind:this={viewport} class="{className} px-2 space-y-4">
     {#each messages as bubble (bubble.id)}
-        {#if LLMResponse.phase === "pending" && bubble.id === LLMResponse.messageId}
+        {#if llmResponse.phase === "pending" && bubble.id === llmResponse.messageId}
             <AssistantPlaceholder />
         {:else}
             {@render ChatBubble(bubble)}

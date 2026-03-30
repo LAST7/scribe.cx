@@ -4,7 +4,7 @@
 
     interface Props {
         onPromptSubmit: (userMessage: string) => void;
-        LLMResponse: LLMResponseState;
+        llmResponse: LLMResponseState;
         class?: string;
     }
 
@@ -14,7 +14,7 @@
 
     let {
         onPromptSubmit,
-        LLMResponse,
+        llmResponse,
         class: className = ""
     }: Props = $props();
 
@@ -47,7 +47,7 @@
 
     async function handleSubmit() {
         // TODO: what to do with "error" phase?
-        if (LLMResponse.phase !== "idle") return;
+        if (llmResponse.phase !== "idle") return;
 
         const userMessage = currentMessage.trim();
         if (userMessage === "") {

@@ -34,7 +34,7 @@ export type LLMCallback = {
     onError: (error: string) => void;
 };
 
-export type LLMConfigStorage = {
+export type LLMConfig = {
     provider: string;
     endpoint: string;
     apiKey: string;
@@ -45,7 +45,7 @@ export type CallLLMParams = {
     endpoint: string;
     apiKey: string;
     modelName: string;
-    conversation: Conversation;
+    chatHistory: Array<MessageFeed>;
     userPrompt: string;
     callback: LLMCallback;
 };
