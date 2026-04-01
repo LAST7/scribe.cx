@@ -30,4 +30,5 @@ pnpm-workspace.yaml
 
 .prettierrc
 
-mock
+# Contains my apiKeys :)
+src/mock/llm.ts
