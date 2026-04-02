@@ -91,7 +91,12 @@ export async function submitPrompt(userPrompt: string, llmConfig: LLMConfig) {
 
     conv.messages = [
         ...conv.messages,
-        createMessage(userMessageId, "user", userPrompt),
+        createMessage(userMessageId, "user", userPrompt)
+    ];
+    storeConversation(conv);
+
+    conv.messages = [
+        ...conv.messages,
         createMessage(llmMessageId, "assistant", "")
     ];
 
