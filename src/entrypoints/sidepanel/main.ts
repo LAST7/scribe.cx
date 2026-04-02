@@ -5,8 +5,9 @@ import "@/assets/app.css";
 // TEST: init mock data
 // TODO: add control flags
 if (import.meta.env.DEV) {
-    const { initLLM } = await import("@/mock/llm");
-    initLLM();
+    import("@/mock/llm").then(({ initLLM }) => {
+        initLLM();
+    });
 }
 
 const app = mount(App, {
