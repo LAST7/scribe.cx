@@ -5,6 +5,7 @@
 
     import AssistantPlaceholder from "@/components/AssistantPlaceholder.svelte";
     import ChatBubble from "./ChatBubble.svelte";
+    import Welcome from "./Welcome.svelte";
 
     import { logger } from "@/utils/logger";
 
@@ -71,6 +72,9 @@
 
 <!-- TODO: Render something when messageFeed is null or empty -->
 <section bind:this={viewport} class="{className} px-2 space-y-4">
+    {#if messages.length === 0}
+        <Welcome />
+    {/if}
     {#each messages as messageFeed (messageFeed.id)}
         {#if llmResponse.phase === "pending" && messageFeed.id === llmResponse.messageId}
             <AssistantPlaceholder />
