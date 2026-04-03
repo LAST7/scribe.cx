@@ -31,12 +31,6 @@
         const lastMessage = messages[messages.length - 1];
         const lastMessageContent = lastMessage?.content;
 
-        // No message
-        if (!lastMessage) return;
-
-        // Q: Is this necessary?
-        if (!lastMessageContent && llmResponse.phase !== "pending") return;
-
         tick().then(() => {
             if (!viewport) {
                 logger.error(
@@ -46,7 +40,7 @@
             }
 
             // TODO: make it an item in preference
-            const threshold = 200;
+            const threshold = 100;
             const isAtBottom =
                 viewport.scrollHeight -
                     viewport.clientHeight -
@@ -54,9 +48,8 @@
                 threshold;
 
             // Do not scroll down when user is navigating upper messages
-            if (!isAtBottom && lastMessage.role !== "user") return;
+            if (!isAtBottom && llmResponse.phase !== "pending") return;
 
-            // QUESTION: `smooth` behavior does not seem to be problemsome?
             viewport.scrollTo({
                 top: viewport.scrollHeight,
                 behavior:
