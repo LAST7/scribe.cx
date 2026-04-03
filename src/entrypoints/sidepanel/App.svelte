@@ -22,7 +22,7 @@
 
     async function onPromptSubmit(userMessage: string) {
         if (!llmConfig) {
-            logger.error("llmConfig is null.");
+            logger.error("llmConfig is null or incomplete.", llmConfig);
             return;
         }
 

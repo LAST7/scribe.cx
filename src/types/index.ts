@@ -1,10 +1,11 @@
 export type UUID = `${string}-${string}-${string}-${string}-${string}`;
 
 export type MessageFeed = {
-    id: string;
+    id: UUID;
     role: "user" | "assistant" | "system";
     timestamp: string;
     content: string;
+    error: boolean;
 };
 
 export type Conversation = {

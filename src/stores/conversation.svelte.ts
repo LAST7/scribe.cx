@@ -9,7 +9,7 @@ import { callLLM } from "@/utils/llm";
 
 import { logger } from "@/utils/logger";
 
-let conversation: Conversation = $state({
+let conv: Conversation = $state({
     sessionId: null,
     messages: []
 });
@@ -26,7 +26,7 @@ let llmResponse: LLMResponseState = $state({
  * @description update message with id `messageId` in `messageFeed` by adding `chunk` to its content
  */
 function streamMessage(messageId: UUID, chunk: string) {
-    const index = conversation?.messages.findIndex((m) => m.id === messageId);
+    const index = conv?.messages.findIndex((m) => m.id === messageId);
 
     if (index === -1) {
         logger.error("target messageId does not exist: ", messageId);
@@ -35,20 +35,20 @@ function streamMessage(messageId: UUID, chunk: string) {
 
     llmResponse.phase = "streaming";
     // NOTE: requires svelte 5 deep state
-    conversation.messages[index].content += chunk;
+    conv.messages[index].content += chunk;
 }
 
 function ensureConversation(): Conversation {
-    if (!conversation.sessionId) {
+    if (!conv.sessionId) {
         const newSessionId: UUID = crypto.randomUUID();
         storeNewConversation(newSessionId);
-        conversation = {
+        conv = {
             sessionId: newSessionId,
             messages: []
         };
     }
 
-    return conversation;
+    return conv;
 }
 
 export function getConvState() {
@@ -57,7 +57,7 @@ export function getConvState() {
             return llmResponse;
         },
         get conversation() {
-            return conversation;
+            return conv;
         }
     };
 }
@@ -82,7 +82,7 @@ export async function submitPrompt(userPrompt: string, llmConfig: LLMConfig) {
         return;
     }
 
-    const conv = ensureConversation();
+    conv = ensureConversation();
     const userMessageId: UUID = crypto.randomUUID();
     const llmMessageId: UUID = crypto.randomUUID();
 
@@ -103,7 +103,7 @@ export async function submitPrompt(userPrompt: string, llmConfig: LLMConfig) {
     try {
         await callLLM({
             ...llmConfig,
-            chatHistory: conversation.messages,
+            chatHistory: conv.messages,
             userPrompt,
             callback: {
                 onStream: (chunk: string) => {
@@ -118,9 +118,13 @@ export async function submitPrompt(userPrompt: string, llmConfig: LLMConfig) {
                 onError: (error: string) => {
                     llmResponse.phase = "error";
                     llmResponse.error = error;
-                    // TODO: render error message
-                    // TODO: error handling, how do we restore from error state?
-                    // Q: where to trigger the render?
+                    conv.messages.map((m) => {
+                        if (m.id === llmResponse.messageId) {
+                            m.error = true;
+                            m.content = error;
+                        }
+                    });
+                    // TODO: how do we restore from error state?
                 }
             }
         });

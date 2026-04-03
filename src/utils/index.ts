@@ -17,6 +17,7 @@ export function createMessage(
         id: messageId,
         role,
         timestamp: getCurrentTimestamp(),
-        content
+        content,
+        error: false
     };
 }
