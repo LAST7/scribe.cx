@@ -50,3 +50,21 @@ export type CallLLMParams = {
     userPrompt: string;
     callback: LLMCallback;
 };
+
+// Content
+
+export type Extraction = ExtractionSuccess | ExtractionFailure;
+
+type ExtractionSuccess = {
+    ok: false;
+    reason: string;
+};
+
+type ExtractionFailure = {
+    ok: true;
+    title: string | undefined | null;
+    textContent: string | undefined | null;
+    byline: string | undefined | null;
+    siteName: string | undefined | null;
+    url: string;
+};

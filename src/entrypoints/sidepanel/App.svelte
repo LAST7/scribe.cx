@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from "svelte";
     import { storage } from "wxt/utils/storage";
 
     import type { LLMConfig } from "@/types";
@@ -8,6 +9,7 @@
     import Prompt from "@/components/Prompt.svelte";
 
     import { getConvState, submitPrompt } from "@/stores/conversation.svelte";
+    import { sendExtractionMsg } from "@/stores/tabContent.svelte";
 
     const chat = getConvState();
 
@@ -15,9 +17,12 @@
     let llmConfig: LLMConfig | null = $state(null);
 
     onMount(async () => {
+        // TODO: move this to background.ts
         // TODO: should validate data read from storage
         // use valibot
         llmConfig = (await storage.getItem("local:llm_config")) as LLMConfig;
+
+        sendExtractionMsg();
     });
 
     async function onPromptSubmit(userMessage: string) {

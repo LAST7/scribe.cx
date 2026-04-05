@@ -4,6 +4,7 @@ import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { CallLLMParams } from "@/types";
 
 import { logger } from "./logger";
+import { getTabContent } from "@/stores/tabContent.svelte";
 
 export async function callLLM(params: CallLLMParams) {
     // TODO: params validation
@@ -25,13 +26,34 @@ export async function callLLM(params: CallLLMParams) {
             }) as ChatCompletionMessageParam
     );
 
+    const tabContentExtraction = getTabContent().tabContent;
+    const extractionSuccess = tabContentExtraction?.ok;
+
+    if (!extractionSuccess) {
+        logger.error(
+            "callLLM: Fail to extract tab content, chatting without context."
+        );
+    }
+
+    const tabTitle = extractionSuccess
+        ? tabContentExtraction.title
+        : "Failed to extract tab content";
+    const tabContent = extractionSuccess
+        ? tabContentExtraction.textContent
+        : "Failed to extract tab content";
+
     const completeContext: Array<ChatCompletionMessageParam> = [
+        // TODO: make it optional
+        {
+            role: "developer",
+            content: `Tab Content: \n${tabContent}`
+        },
         ...messages,
         { role: "user", content: params.userPrompt }
     ];
 
     logger.debug(
-        `Calling LLM API: ${params.endpoint} with key: ${params.apiKey}`
+        `Calling LLM API: ${params.endpoint} with key: ${params.apiKey}, tab content of ${extractionSuccess ? tabTitle : "(null)"}`
     );
 
     // LLM API integration

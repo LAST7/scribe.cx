@@ -2,7 +2,7 @@
     "name": "scribe.cx",
     "description": "Web page summarizer powered by LLM",
     "private": true,
-    "version": "0.1.4",
+    "version": "0.1.5",
     "type": "module",
     "scripts": {
         "dev": "wxt",
@@ -39,6 +39,7 @@
         "wxt": "^0.20.20"
     },
     "dependencies": {
+        "@mozilla/readability": "^0.6.0",
         "@wxt-dev/webextension-polyfill": "^1.0.0",
         "clsx": "^2.1.1",
         "openai": "^6.32.0",

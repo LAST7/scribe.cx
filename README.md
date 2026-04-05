@@ -2,49 +2,58 @@
 
 # Scribe.cx
 
-Cross-browser web extension (Chrome + Firefox) for summarizing/extracting information from the current page via an LLM.
+Cross-browser web extension for summarizing the current page with an LLM in a side panel.
 
-This project is "BYOK" (bring your own key): it talks to an OpenAI-compatible endpoint using the `openai` JS SDK.
+This project is BYOK (bring your own key): it connects to an OpenAI-compatible endpoint using the `openai` JS SDK.
 
-## What Works Today
+## What It Does
 
-- Side panel UI (Svelte 5) with a chat-style prompt + streaming assistant responses.
-- Conversation state stored in extension local storage.
-- Cross-browser side panel open behavior when clicking the extension action.
-
-Note: page extraction is not wired up yet; the content script is currently a stub.
+- Opens a side panel from the extension action in Chrome and Firefox.
+- Sends chat prompts to an OpenAI-compatible API and streams assistant responses.
+- Extracts the active page content with Mozilla Readability when possible.
+- Stores conversations and LLM config in extension local storage.
 
 ## Tech Stack
 
-- WXT (build tooling + cross-browser packaging)
+- WXT for cross-browser extension builds
 - Svelte 5
-- Tailwind CSS v4 + Skeleton UI
+- Tailwind CSS v4 + Skeleton
 - `@wxt-dev/webextension-polyfill`
 - `openai` (OpenAI-compatible API client)
+- `@mozilla/readability` for page extraction
+
+## Project Layout
+
+- `src/entrypoints/sidepanel/` - side panel app
+- `src/entrypoints/background.ts` - action button behavior and side panel setup
+- `src/entrypoints/content.ts` - page extraction content script
+- `src/stores/` - conversation and extracted tab state
+- `src/storage/` - persistent extension storage helpers
+- `src/utils/llm.ts` - LLM streaming client
 
 ## Development
 
-Prereqs: Node.js + pnpm.
+Prereqs: Node.js and `pnpm`.
 
-Install:
+Install dependencies:
 
 ```bash
 pnpm install
 ```
 
-Run (Chromium):
+Run locally for Chromium:
 
 ```bash
 pnpm dev
 ```
 
-Run (Firefox):
+Run locally for Firefox:
 
 ```bash
 pnpm dev:firefox
 ```
 
-Build / Zip:
+Build and package:
 
 ```bash
 pnpm build
@@ -58,37 +67,35 @@ pnpm zip:firefox
 
 WXT writes browser builds into `.output/`.
 
-- Chrome/Chromium: open `chrome://extensions` -> enable Developer Mode -> Load unpacked -> select `.output/chrome-mv3/`.
-- Firefox: open `about:debugging#/runtime/this-firefox` -> Load Temporary Add-on -> select `.output/firefox-mv2/manifest.json` (or whichever `.output/firefox-*` folder WXT produced).
+- Chrome or Chromium: open `chrome://extensions`, enable Developer mode, then load the unpacked extension from `.output/chrome-mv3/`.
+- Firefox: open `about:debugging#/runtime/this-firefox`, then load the temporary add-on from `.output/firefox-mv2/manifest.json` or the generated `.output/firefox-*` folder.
 
 ## Configuration (BYOK)
 
 The extension reads these values from WXT storage:
 
-- LLM endpoint: `local:llm_endpoint` (default is set in `src/utils/storage.ts`)
-- API key: `local:llm_api_key` (default is set in `src/utils/storage.ts`)
+- LLM config: `local:llm_config`
+- Conversation list: `local:conversation_list`
+- Conversation messages: `local:conversation:<sessionId>`
 
-There is no settings UI yet. For now you can set them by:
+The LLM config currently includes:
 
-1. Running the extension once.
-2. Opening the extension's background/sidepanel DevTools.
-3. Editing extension storage values for the keys above.
+- provider
+- endpoint
+- apiKey
+- modelName
 
-Implementation details:
-
-- LLM client: `src/utils/llm.ts` (currently streams chat completions; model is hard-coded).
-- Storage keys: `src/utils/storage.ts`.
+There is no settings UI yet. For now, set storage values through the extension DevTools.
 
 ## Permissions
 
 Declared in `wxt.config.ts`:
 
-- `sidePanel` (Chrome side panel API)
-- `storage` (persist endpoint/key + conversation)
-- `activeTab` (intended for reading the current tab when page extraction is implemented)
+- `sidePanel` for the side panel API
+- `storage` for persistence
+- `activeTab` for reading the active tab during extraction
 
-## Next Steps (Ideas)
+## Notes
 
-- [ ] Add an options page to edit endpoint/key/model.
-- [ ] Implement page text extraction in `src/entrypoints/content.ts` + message passing to the side panel.
-- [ ] Add prompt templates for summarize/extract modes.
+- The content script uses Readability and falls back to a failure message when extraction is not possible.
+- The side panel currently submits prompts directly to the configured LLM endpoint and streams tokens into the chat UI.
