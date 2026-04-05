@@ -64,7 +64,9 @@
 </script>
 
 <!-- TODO: Render something when messageFeed is null or empty -->
-<section bind:this={viewport} class="{className} px-2 space-y-4">
+<section
+    bind:this={viewport}
+    class="{className} min-h-0 px-2 space-y-4 overflow-y-auto">
     {#if messages.length === 0}
         <Welcome />
     {/if}

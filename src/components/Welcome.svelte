@@ -24,9 +24,6 @@
         </div>
         <div class="space-y-1">
             <h2 class="h3 font-bold">Greetings from Scribe.cx</h2>
-            <p class="text-sm opacity-60">
-                I can help you with summarizing websites
-            </p>
         </div>
     </div>
 

@@ -58,7 +58,7 @@
     <!-- Message Content Area -->
     <div
         class={cn(
-            "flex flex-col max-w-[80%]",
+            "flex min-w-0 flex-col max-w-[80%]",
             isUser && "items-end",
             !isUser && "items-start"
         )}>
@@ -75,7 +75,7 @@
         <!-- Bubble Card -->
         <div
             class={cn(
-                "card rounded-xl p-3 shadow-sm space-y-2",
+                "card min-w-0 max-w-full overflow-hidden rounded-xl p-3 shadow-sm space-y-2",
                 isUser && "rounded-tr-none",
                 !isUser && "rounded-tl-none",
                 // error style
