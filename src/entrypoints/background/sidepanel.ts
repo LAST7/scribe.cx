@@ -1,5 +1,5 @@
 import { Tabs } from "webextension-polyfill";
-import { logger } from "./logger";
+import { logger } from "@/utils/logger";
 
 /**
  * Defines the contract for side panel operations across different browsers.

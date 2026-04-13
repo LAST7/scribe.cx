@@ -3,15 +3,14 @@ import OpenAI from "openai";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { CallLLMParams } from "@/types";
 
-import { logger } from "./logger";
-import { getTabContent } from "@/stores/tabContent.svelte";
+import { logger } from "@/utils/logger";
+import { getLatestTabContent } from "@/stores/tabContent.svelte";
 
 export async function callLLM(params: CallLLMParams) {
     // TODO: params validation
     const client = new OpenAI({
         baseURL: params.endpoint,
         apiKey: params.apiKey,
-        // Q: wtf is this? why is it needed?
         dangerouslyAllowBrowser: true
     });
 
@@ -26,12 +25,14 @@ export async function callLLM(params: CallLLMParams) {
             }) as ChatCompletionMessageParam
     );
 
-    const tabContentExtraction = getTabContent().tabContent;
-    const extractionSuccess = tabContentExtraction?.ok;
+    const tabContentExtraction = await getLatestTabContent();
+    const extractionSuccess = tabContentExtraction.ok;
 
     if (!extractionSuccess) {
         logger.error(
-            "callLLM: Fail to extract tab content, chatting without context."
+            "callLLM: Fail to extract tab content, chatting without context.\n",
+            "reason: ",
+            tabContentExtraction.reason
         );
     }
 
@@ -40,7 +41,7 @@ export async function callLLM(params: CallLLMParams) {
         : "Failed to extract tab title";
     const tabContent = extractionSuccess
         ? tabContentExtraction.content
-        : "Failed to extract tab content";
+        : "Failed to extract tab content: " + tabContentExtraction.reason;
 
     const completeContext: Array<ChatCompletionMessageParam> = [
         // TODO: make it optional
@@ -53,7 +54,7 @@ export async function callLLM(params: CallLLMParams) {
     ];
 
     logger.debug(
-        `Calling LLM API: ${params.endpoint} with key: ${params.apiKey}, tab content of ${extractionSuccess ? tabTitle : "(null)"}`
+        `Calling LLM API: ${params.endpoint}, tab title of ${extractionSuccess ? tabTitle : "(null)"}`
     );
 
     // LLM API integration

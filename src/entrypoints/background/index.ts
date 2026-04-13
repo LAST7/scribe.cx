@@ -1,5 +1,5 @@
 import { logger } from "@/utils/logger";
-import { openSidePanelAsDefault } from "@/utils/sidepanel";
+import { openSidePanelAsDefault } from "./sidepanel";
 
 export default defineBackground(() => {
     logger.info(`Hello ${import.meta.env.BROWSER}.`);

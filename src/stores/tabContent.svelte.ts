@@ -1,26 +1,20 @@
 import { Extraction } from "@/types";
 
+// TODO: make it an array of Extractions
 let tabContent: Extraction | null = $state(null);
 
-export function getTabContent() {
-    return {
-        get tabContent() {
-            return tabContent;
-        }
-    };
-}
+export async function getLatestTabContent(tabId?: number) {
+    const curTabId = tabId
+        ? tabId
+        : (await browser.tabs.query({ active: true, currentWindow: true }))[0]
+              ?.id;
 
-export async function sendExtractionMsg() {
-    const curTabId = (
-        await browser.tabs.query({ active: true, currentWindow: true })
-    )[0]?.id;
+    if (!curTabId) throw new Error("Invalid tabId");
 
-    if (!curTabId) {
-        logger.error("Invalid tabId: ", curTabId);
-        return;
-    }
-
-    tabContent = await browser.tabs.sendMessage(curTabId, {
+    const content: Extraction = await browser.tabs.sendMessage(curTabId, {
         type: "EXTRACT_PAGE_CONTENT"
     });
+
+    tabContent = content;
+    return content;
 }

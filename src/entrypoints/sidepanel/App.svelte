@@ -9,7 +9,6 @@
     import Prompt from "@/components/Prompt.svelte";
 
     import { getConvState, submitPrompt } from "@/stores/conversation.svelte";
-    import { sendExtractionMsg } from "@/stores/tabContent.svelte";
 
     const chat = getConvState();
 
@@ -21,8 +20,6 @@
         // TODO: should validate data read from storage
         // use valibot
         llmConfig = (await storage.getItem("local:llm_config")) as LLMConfig;
-
-        sendExtractionMsg();
     });
 
     async function onPromptSubmit(userMessage: string) {
