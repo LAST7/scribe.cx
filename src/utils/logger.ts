@@ -1,5 +1,6 @@
 const getContext = (): string => {
-    if (typeof window === "undefined") return "BG"; // Background Service Worker
+    if (typeof window === "undefined" || typeof location === "undefined")
+        return "BG"; // Background Service Worker
     if (location.protocol.includes("extension")) {
         const path = location.pathname.replace("/", "").replace(".html", "");
         return path ? path.toUpperCase() : "PAGE"; // i.e. SIDEPANEL, OPTIONS

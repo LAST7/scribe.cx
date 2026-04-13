@@ -55,16 +55,18 @@ export type CallLLMParams = {
 
 export type Extraction = ExtractionSuccess | ExtractionFailure;
 
-type ExtractionSuccess = {
+type ExtractionFailure = {
     ok: false;
     reason: string;
 };
 
-type ExtractionFailure = {
+type ExtractionSuccess = {
     ok: true;
     title: string | undefined | null;
-    textContent: string | undefined | null;
-    byline: string | undefined | null;
-    siteName: string | undefined | null;
-    url: string;
+    text: string;
+    content?: string;
+    byline?: string;
+    siteName?: string;
+    // url: string;
+    parser: "readability" | "fallback";
 };

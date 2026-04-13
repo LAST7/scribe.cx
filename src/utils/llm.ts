@@ -37,9 +37,9 @@ export async function callLLM(params: CallLLMParams) {
 
     const tabTitle = extractionSuccess
         ? tabContentExtraction.title
-        : "Failed to extract tab content";
+        : "Failed to extract tab title";
     const tabContent = extractionSuccess
-        ? tabContentExtraction.textContent
+        ? tabContentExtraction.content
         : "Failed to extract tab content";
 
     const completeContext: Array<ChatCompletionMessageParam> = [

@@ -4,8 +4,8 @@
     import type { LLMResponseState, MessageFeed } from "@/types";
 
     import AssistantPlaceholder from "@/components/AssistantPlaceholder.svelte";
-    import ChatBubble from "./ChatBubble.svelte";
-    import Welcome from "./Welcome.svelte";
+    import ChatBubble from "@/components/ChatBubble.svelte";
+    import Welcome from "@/components/Welcome.svelte";
 
     import { logger } from "@/utils/logger";
 

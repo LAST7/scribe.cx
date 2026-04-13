@@ -1,34 +1,52 @@
+import { isProbablyReaderable } from "@mozilla/readability";
+
 import { Extraction } from "@/types";
+
+import {
+    tryReadabilityExtraction,
+    tryFallbackExtraction
+} from "@/parser/default";
 import { logger } from "@/utils/logger";
-import { isProbablyReaderable, Readability } from "@mozilla/readability";
 
-async function pageExtraction(): Promise<Extraction | null> {
-    // TODO: add an option: "force readability"
-    if (isProbablyReaderable(document)) {
-        const domClone = document.cloneNode(true) as Document;
-        const article: any = new Readability(domClone).parse();
+export async function pageExtraction(): Promise<Extraction> {
+    const readerable = isProbablyReaderable(document);
 
-        if (!article) {
-            logger.error("Readability parsing failed.");
-            return { ok: false, reason: "Readability parsing failed." };
-        }
-
-        logger.debug("Page content extracted: ", article?.title);
-
-        return {
-            ok: true,
-            title: article.title,
-            textContent: article.textContent,
-            byline: article.byline,
-            siteName: article.siteName,
-            url: location.href
-        };
-    } else {
+    if (!readerable)
         logger.info(
-            "Scribe.cx: web page is probably not readerable, disable readability parsing."
+            "Scribe.cx: page is probably not readerable, but readability will still be attempted."
         );
-        return { ok: false, reason: "not readable" };
+
+    const readabilityResult: Extraction = tryReadabilityExtraction(document);
+    if (readabilityResult.ok) {
+        logger.debug(
+            `Extraction success via Readability:
+title: ${readabilityResult.title}
+length: ${readabilityResult.text.length}`
+        );
+
+        return readabilityResult;
     }
+
+    logger.warn(
+        "Readability failed or content quality was poor. Fallback will be used."
+    );
+
+    const fallbackResult: Extraction = tryFallbackExtraction(document);
+    if (fallbackResult.ok) {
+        logger.debug(
+            `Extraction success via fallback:
+title: ${fallbackResult.title}
+length: ${fallbackResult.text.length}`
+        );
+
+        return fallbackResult;
+    }
+
+    logger.error("Page extraction failed: no usable content found.");
+    return {
+        ok: false,
+        reason: "No usable content found on this page."
+    };
 }
 
 export default defineContentScript({
