@@ -1,17 +1,17 @@
 import { Extraction } from "@/types";
 import { Readability } from "@mozilla/readability";
 
-export function normalizeText(text: string): string {
+function normalizeText(text: string): string {
     return text
         .replace(/\s+/g, " ")
         .replace(/\n{3,}/g, "\n\n")
         .trim();
 }
-export function isGoodText(text: string): boolean {
+function isGoodText(text: string): boolean {
     const normalized = normalizeText(text);
     return normalized.length >= 200;
 }
-export function removeNoise(root: ParentNode) {
+function removeNoise(root: ParentNode) {
     const selectors = [
         "script",
         "style",
@@ -31,7 +31,7 @@ export function removeNoise(root: ParentNode) {
     root.querySelectorAll(selectors.join(",")).forEach((el) => el.remove());
 }
 
-export function extractFallbackText(
+function extractFallbackText(
     doc: Document
 ): { title: string; text: string } | null {
     const clone = doc.cloneNode(true) as Document;
@@ -53,19 +53,18 @@ export function extractFallbackText(
         if (
             el &&
             el.textContent &&
+            // Q: why >= 200?
             normalizeText(el.textContent).length >= 200
         ) {
             container = el;
             break;
         }
     }
-    if (!container) {
-        return null;
-    }
+    if (!container) return null;
+
     const text = normalizeText(container.textContent || "");
-    if (!isGoodText(text)) {
-        return null;
-    }
+    if (!isGoodText(text)) return null;
+
     const title = normalizeText(clone.title || document.title || "");
     return {
         title,

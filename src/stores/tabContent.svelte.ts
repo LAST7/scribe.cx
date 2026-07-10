@@ -15,6 +15,9 @@ export async function getLatestTabContent(tabId?: number) {
         type: "EXTRACT_PAGE_CONTENT"
     });
 
+    // TEST: debug
+    logger.debug(content);
+
     tabContent = content;
     return content;
 }

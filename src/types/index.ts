@@ -63,10 +63,52 @@ type ExtractionFailure = {
 type ExtractionSuccess = {
     ok: true;
     title: string | undefined | null;
-    text: string;
-    content?: string;
+    content: string;
     byline?: string;
     siteName?: string;
     // url: string;
-    parser: "readability" | "fallback";
+    parser: "crw" | "readability" | "fallback";
+};
+
+// CRW
+
+type CRWLLMUsage = {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+    estimatedCostUsd: number;
+    model: string;
+    provider: string;
+};
+
+type CRWChunk = {
+    content: string;
+    score: number;
+    index: number;
+};
+
+type CRWMetaData = {
+    title: string;
+    description: string;
+    sourceURL: string;
+    statusCode?: number;
+    elapseMs: number;
+};
+
+type CRWData = {
+    markdown: string | null;
+    html?: string | null;
+    links?: Array<string>;
+    json?: any;
+    summary?: string | null;
+    llmUsage?: CRWLLMUsage;
+    chunks?: Array<CRWChunk>;
+    warnings?: Array<string>;
+    warning?: string;
+    metadata: CRWMetaData;
+};
+
+export type CRWScrapeResult = {
+    success: boolean;
+    data: CRWData;
 };

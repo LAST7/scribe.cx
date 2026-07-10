@@ -29,7 +29,7 @@
     // Is there a better way? Like trigger scrolling via the send button click?
     $effect(() => {
         const lastMessage = messages[messages.length - 1];
-        const lastMessageContent = lastMessage?.content;
+        const _lastMessageContent = lastMessage?.content;
 
         tick().then(() => {
             if (!viewport) {
@@ -63,7 +63,6 @@
     }
 </script>
 
-<!-- TODO: Render something when messageFeed is null or empty -->
 <section
     bind:this={viewport}
     class="{className} min-h-0 px-2 space-y-4 overflow-y-auto">
