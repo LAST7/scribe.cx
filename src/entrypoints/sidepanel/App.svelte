@@ -1,35 +1,37 @@
 <script lang="ts">
+    import { browser } from "@wxt-dev/webextension-polyfill/browser";
     import { onMount } from "svelte";
-    import { storage } from "wxt/utils/storage";
 
-    import type { LLMConfig } from "@/types";
+    import { CHAT_PORT_NAME } from "@/types/portmessage";
 
     import Header from "@/components/Header.svelte";
     import Chat from "@/components/Chat.svelte";
     import Prompt from "@/components/Prompt.svelte";
 
-    import { getConvState, submitPrompt } from "@/stores/conversation.svelte";
+    import { getConvState } from "@/stores/conversation.svelte";
+    import { setFGChatPortListener } from "@/services/chatClient";
 
     const chat = getConvState();
 
-    // LLM config
-    let llmConfig: LLMConfig | null = $state(null);
+    let chatPort: browser.Runtime.Port | null = $state(null);
 
-    onMount(async () => {
-        // TODO: move this to background.ts
-        // TODO: should validate data read from storage
-        // use valibot
-        llmConfig = (await storage.getItem("local:llm_config")) as LLMConfig;
-    });
-
-    async function onPromptSubmit(userMessage: string) {
-        if (!llmConfig) {
-            logger.error("llmConfig is null or incomplete.", llmConfig);
+    onMount(() => {
+        chatPort = browser.runtime.connect({ name: CHAT_PORT_NAME });
+        if (!chatPort) {
+            // TODO: handle error
+            logger.debug("Failed to connect chat port to background.");
             return;
         }
 
-        await submitPrompt(userMessage, llmConfig);
-    }
+        chatPort.onDisconnect.addListener(() => {
+            logger.error("ChatPort disconnected.");
+        });
+        setFGChatPortListener(chatPort);
+
+        return () => {
+            chatPort?.disconnect();
+        };
+    });
 </script>
 
 <div class="flex flex-col h-screen justify-between bg-surface-100-950">
@@ -37,10 +39,9 @@
     <Chat
         messages={chat.conversation.messages}
         llmResponse={chat.llmResponse}
-        modelName={llmConfig?.modelName}
         class="flex-1 overflow-y-auto overflow-x-hidden z-10 pb-40" />
     <Prompt
-        {onPromptSubmit}
+        {chatPort}
         llmResponse={chat.llmResponse}
         class="absolute z-10 bottom-0 w-full bg-transparent pointer-events-none" />
 </div>

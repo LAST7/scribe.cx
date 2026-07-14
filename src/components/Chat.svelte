@@ -19,6 +19,7 @@
     let {
         messages,
         llmResponse,
+        // TODO: get model name from background
         modelName = "LLM",
         class: className = ""
     }: Props = $props();

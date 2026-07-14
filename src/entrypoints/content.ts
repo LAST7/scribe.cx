@@ -9,8 +9,8 @@ import {
 
 import { logger } from "@/utils/logger";
 
-export async function pageExtraction(): Promise<Extraction> {
-    const crwExtraction = await CRWExtraction(document.location.href);
+export async function pageExtraction(tabId?: number): Promise<Extraction> {
+    const crwExtraction = await CRWExtraction(document.location.href, tabId);
 
     if (crwExtraction.ok) {
         logger.debug(
@@ -85,7 +85,7 @@ export default defineContentScript({
 
                 switch (msg?.type) {
                     case "EXTRACT_PAGE_CONTENT":
-                        return pageExtraction();
+                        return pageExtraction(msg?.tabId);
 
                     default:
                         logger.error(`Unsupported message type: ${msg?.type}`);

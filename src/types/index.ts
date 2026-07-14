@@ -29,12 +29,6 @@ export type LLMResponseState = {
     error: string;
 };
 
-export type LLMCallback = {
-    onStream: (chunk: string) => void;
-    onDone: () => void;
-    onError: (error: string) => void;
-};
-
 export type LLMConfig = {
     provider: string;
     endpoint: string;
@@ -43,12 +37,9 @@ export type LLMConfig = {
 };
 
 export type CallLLMParams = {
-    endpoint: string;
-    apiKey: string;
-    modelName: string;
-    chatHistory: Array<MessageFeed>;
+    conv: Conversation;
     userPrompt: string;
-    callback: LLMCallback;
+    llmMessageId: UUID;
 };
 
 // Content
@@ -57,58 +48,16 @@ export type Extraction = ExtractionSuccess | ExtractionFailure;
 
 type ExtractionFailure = {
     ok: false;
+    tabId?: number;
     reason: string;
 };
 
 type ExtractionSuccess = {
     ok: true;
+    tabId?: number;
     title: string | undefined | null;
     content: string;
     byline?: string;
     siteName?: string;
-    // url: string;
     parser: "crw" | "readability" | "fallback";
-};
-
-// CRW
-
-type CRWLLMUsage = {
-    inputTokens: number;
-    outputTokens: number;
-    totalTokens: number;
-    estimatedCostUsd: number;
-    model: string;
-    provider: string;
-};
-
-type CRWChunk = {
-    content: string;
-    score: number;
-    index: number;
-};
-
-type CRWMetaData = {
-    title: string;
-    description: string;
-    sourceURL: string;
-    statusCode?: number;
-    elapseMs: number;
-};
-
-type CRWData = {
-    markdown: string | null;
-    html?: string | null;
-    links?: Array<string>;
-    json?: any;
-    summary?: string | null;
-    llmUsage?: CRWLLMUsage;
-    chunks?: Array<CRWChunk>;
-    warnings?: Array<string>;
-    warning?: string;
-    metadata: CRWMetaData;
-};
-
-export type CRWScrapeResult = {
-    success: boolean;
-    data: CRWData;
 };

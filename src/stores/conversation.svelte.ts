@@ -1,11 +1,8 @@
-import type { Conversation, LLMConfig, LLMResponseState, UUID } from "@/types";
+import type { Conversation, LLMResponseState, UUID } from "@/types";
+import { CHAT_PORT_NAME, ChatPortMsgToFT } from "@/types/portmessage";
 
-import {
-    storeConversation,
-    storeNewConversation
-} from "@/storage/conversation";
 import { createMessage } from "@/utils";
-import { callLLM } from "@/utils/llm";
+import { sendChatRequest } from "@/services/chatClient";
 
 import { logger } from "@/utils/logger";
 
@@ -26,29 +23,57 @@ let llmResponse: LLMResponseState = $state({
  * @description update message with id `messageId` in `messageFeed` by adding `chunk` to its content
  */
 function streamMessage(messageId: UUID, chunk: string) {
-    const index = conv?.messages.findIndex((m) => m.id === messageId);
+    let index: number | null = null;
+    if (conv.messages.at(-1)?.id === messageId) {
+        index = conv.messages.length - 1;
+    } else {
+        index = conv?.messages.findIndex((m) => m.id === messageId);
+    }
 
-    if (index === -1) {
+    if (!index || index === -1) {
+        // TODO: handle error
         logger.error("target messageId does not exist: ", messageId);
         return;
     }
 
-    llmResponse.phase = "streaming";
     // NOTE: requires svelte 5 deep state
     conv.messages[index].content += chunk;
 }
 
-function ensureConversation(): Conversation {
-    if (!conv.sessionId) {
-        const newSessionId: UUID = crypto.randomUUID();
-        storeNewConversation(newSessionId);
-        conv = {
-            sessionId: newSessionId,
-            messages: []
-        };
-    }
+export function handleChatPortMsg(msg: ChatPortMsgToFT) {
+    switch (msg.type) {
+        case "CHAT_STARTED":
+            llmResponse.phase = "streaming";
+            logger.debug("Streaming starts.");
+            break;
+        case "CHAT_CHUNK":
+            streamMessage(msg.messageId, msg.chunk);
+            break;
 
-    return conv;
+        case "CHAT_DONE":
+            llmResponse.phase = "idle";
+            llmResponse.messageId = null;
+            logger.debug("Streaming ends.");
+            break;
+        case "CHAT_ERROR":
+            llmResponse.phase = "error";
+            llmResponse.error = msg.error;
+            const targetMessage = conv.messages.find(
+                (m) => m.id === llmResponse.messageId
+            );
+            if (targetMessage) {
+                targetMessage.error = true;
+                targetMessage.content = msg.error;
+            }
+            logger.debug("Error occurs when streaming: ", msg.error);
+            break;
+
+        default:
+            logger.error(
+                `Unsupported port(${CHAT_PORT_NAME}) message type: ${msg}`
+            );
+            break;
+    }
 }
 
 export function getConvState() {
@@ -66,23 +91,17 @@ export function getConvState() {
  * Submits a user prompt and manages the LLM streaming response lifecycle.
  *
  * @param userPrompt - The user's input text to send to the LLM.
- * @param llmConfig - LLM config including provider, endpoint, api key and model name
  */
-export async function submitPrompt(userPrompt: string, llmConfig: LLMConfig) {
+export async function submitPrompt(
+    chatPort: browser.runtime.Port,
+    userPrompt: string
+) {
     if (llmResponse.phase !== "idle") {
+        // TODO: inform user?
         logger.error("Cannot submit while LLM is not idle.");
         return;
     }
 
-    if (!(llmConfig.endpoint && llmConfig.apiKey && llmConfig.modelName)) {
-        llmResponse.phase = "error";
-        llmResponse.error = `Incomplete LLM config: ${llmConfig}`;
-
-        logger.error("Incomplete LLM config: ", llmConfig);
-        return;
-    }
-
-    conv = ensureConversation();
     const userMessageId: UUID = crypto.randomUUID();
     const llmMessageId: UUID = crypto.randomUUID();
 
@@ -91,47 +110,22 @@ export async function submitPrompt(userPrompt: string, llmConfig: LLMConfig) {
 
     conv.messages = [
         ...conv.messages,
-        createMessage(userMessageId, "user", userPrompt)
-    ];
-    storeConversation(conv);
-
-    conv.messages = [
-        ...conv.messages,
+        createMessage(userMessageId, "user", userPrompt),
         createMessage(llmMessageId, "assistant", "")
     ];
 
+    const convSnapshot = $state.snapshot(conv);
+
     try {
-        await callLLM({
-            ...llmConfig,
-            chatHistory: conv.messages,
+        sendChatRequest(chatPort, {
+            conv: convSnapshot,
             userPrompt,
-            callback: {
-                onStream: (chunk: string) => {
-                    streamMessage(llmMessageId, chunk);
-                },
-                onDone: () => {
-                    storeConversation(conv);
-                    llmResponse.phase = "idle";
-                    llmResponse.messageId = null;
-                    llmResponse.error = "";
-                },
-                onError: (error: string) => {
-                    llmResponse.phase = "error";
-                    llmResponse.error = error;
-                    conv.messages.map((m) => {
-                        if (m.id === llmResponse.messageId) {
-                            m.error = true;
-                            m.content = error;
-                        }
-                    });
-                    // TODO: how do we restore from error state?
-                }
-            }
+            llmMessageId
         });
-    } catch (err: unknown) {
-        // QUESTION: is it required when inner function already has some kind of try-catch mechanism?
-        logger.error(err);
+    } catch (error: unknown) {
+        // NOTE: errors caught here are related to port message
+        logger.error(error);
         llmResponse.phase = "error";
-        llmResponse.error = String(err);
+        llmResponse.error = String(error);
     }
 }

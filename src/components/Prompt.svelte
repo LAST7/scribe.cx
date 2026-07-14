@@ -1,9 +1,13 @@
 <script lang="ts">
-    import type { LLMResponseState } from "@/types";
+    import { browser } from "@wxt-dev/webextension-polyfill/browser";
     import { CornerRightUp } from "@lucide/svelte";
 
+    import type { LLMResponseState } from "@/types";
+
+    import { submitPrompt } from "@/stores/conversation.svelte";
+
     interface Props {
-        onPromptSubmit: (userMessage: string) => void;
+        chatPort: browser.Runtime.Port | null;
         llmResponse: LLMResponseState;
         class?: string;
     }
@@ -12,11 +16,7 @@
 
     let textareaRef: HTMLTextAreaElement;
 
-    let {
-        onPromptSubmit,
-        llmResponse,
-        class: className = ""
-    }: Props = $props();
+    let { chatPort, llmResponse, class: className = "" }: Props = $props();
 
     let currentMessage = $state("");
 
@@ -45,9 +45,21 @@
         }
     }
 
-    async function handleSubmit() {
+    function handleSubmit() {
         // TODO: what to do with "error" phase?
-        if (llmResponse.phase !== "idle") return;
+        // TODO: inform the user
+        if (llmResponse.phase !== "idle") {
+            logger.error(
+                "llmResponse is not in idle phase. Current phase: ",
+                llmResponse.phase
+            );
+            return;
+        }
+
+        if (!chatPort) {
+            logger.error("Chat port is not connected.");
+            return;
+        }
 
         const userMessage = currentMessage.trim();
         if (userMessage === "") {
@@ -57,16 +69,17 @@
         // Clear prompt
         currentMessage = "";
 
-        if (!textareaRef) {
+        if (textareaRef) {
+            // reset height after message sent
+            textareaRef.style.height = "auto";
+            // TODO: update Prompt.svelte UI style to prevent user input during LLM request
+        } else {
             logger.error(
                 " textareaRef is undefined, unable to reset textarea height. "
             );
         }
-        // reset height after message sent
-        textareaRef.style.height = "auto";
-        // TODO: update Prompt.svelte UI style to prevent user input during LLM request
 
-        onPromptSubmit(userMessage);
+        submitPrompt(chatPort, userMessage);
     }
 </script>
 
@@ -105,7 +118,9 @@
                 class="btn m-2 transition-all {currentMessage.trim()
                     ? 'preset-filled-primary-500 scale-100'
                     : 'preset-tonal scale-95 opacity-50'}"
-                disabled={!currentMessage.trim()}
+                disabled={!currentMessage.trim() ||
+                    llmResponse.phase !== "idle" ||
+                    !chatPort}
                 onclick={handleSubmit}>
                 <CornerRightUp class="size-6" />
             </button>

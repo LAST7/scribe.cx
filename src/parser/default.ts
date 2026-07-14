@@ -72,14 +72,21 @@ function extractFallbackText(
     };
 }
 
-export function tryReadabilityExtraction(doc: Document): Extraction {
+export async function tryReadabilityExtraction(
+    doc: Document
+): Promise<Extraction> {
     // TODO: add an option
     const domClone = doc.cloneNode(true) as Document;
     const article: any = new Readability(domClone).parse();
+    // FIXME: parser should not look for tabId
+    const tabId = (
+        await browser.tabs.query({ active: true, currentWindow: true })
+    )[0]?.id;
 
     if (!article)
         return {
             ok: false,
+            tabId,
             reason: "Readability parsing returns null or undefined."
         };
 
@@ -88,13 +95,14 @@ export function tryReadabilityExtraction(doc: Document): Extraction {
     if (!isGoodText(text))
         return {
             ok: false,
+            tabId,
             reason: "Bad text content in extraction result."
         };
 
     return {
         ok: true,
         title: article.title,
-        text,
+        tabId,
         content: article.content,
         byline: article.byline,
         siteName: article.siteName,
@@ -102,7 +110,9 @@ export function tryReadabilityExtraction(doc: Document): Extraction {
     };
 }
 
-export function tryFallbackExtraction(doc: Document): Extraction {
+export async function tryFallbackExtraction(
+    doc: Document
+): Promise<Extraction> {
     const fallback = extractFallbackText(doc);
     if (!fallback)
         return {
@@ -110,10 +120,14 @@ export function tryFallbackExtraction(doc: Document): Extraction {
             reason: "Fallback parser failed."
         };
 
+    const tabId = (
+        await browser.tabs.query({ active: true, currentWindow: true })
+    )[0]?.id;
+
     return {
         ok: true,
+        tabId,
         title: fallback.title,
-        text: fallback.text,
         content: fallback.text,
         parser: "fallback"
     };

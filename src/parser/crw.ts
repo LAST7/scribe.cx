@@ -1,7 +1,39 @@
-import { CRWScrapeResult, Extraction } from "@/types";
+import { Extraction } from "@/types";
+import { CRWConfig, CRWScrapeResult } from "@/types/crw";
 
-function CRWtoExtraction(crwResult: CRWScrapeResult): Extraction {
-    // TEST: log
+function isCRWConfig(cfg: any): cfg is CRWConfig {
+    if (!cfg || typeof cfg !== "object") return false;
+
+    const candidate = cfg as Partial<CRWConfig>;
+
+    return (
+        typeof candidate.endpoint === "string" &&
+        typeof candidate.apiKey === "string"
+    );
+}
+
+async function readCRWConfig() {
+    try {
+        const cfg = (await storage.getItem("local:crw_config")) as CRWConfig;
+        if (isCRWConfig(cfg)) {
+            logger.debug("CRWConfig Read from storage.");
+            return cfg;
+        } else {
+            logger.error("Incompatible or null crw config: ", cfg);
+            return null;
+        }
+    } catch (error: unknown) {
+        // TODO: handle error
+        logger.error("Error when reading crw config from storage: ", error);
+        return null;
+    }
+}
+
+function CRWtoExtraction(
+    crwResult: CRWScrapeResult,
+    tabId?: number
+): Extraction {
+    // TEST: debug
     logger.debug(crwResult);
 
     if (!crwResult.success) {
@@ -14,19 +46,32 @@ function CRWtoExtraction(crwResult: CRWScrapeResult): Extraction {
     return {
         // TODO: description? what about other unused property in Extraction?
         ok: true,
+        tabId,
         title: crwResult.data.metadata.title,
         content: crwResult.data.markdown ?? "",
         parser: "crw"
     };
 }
 
-export async function CRWExtraction(url: string): Promise<Extraction> {
-    // TODO: custom crw endpoint
-    const response = await fetch("https://crw.imlast.top/v1/scrape", {
+export async function CRWExtraction(
+    url: string,
+    tabId?: number
+): Promise<Extraction> {
+    const crwConfig: CRWConfig | null = await readCRWConfig();
+
+    if (!crwConfig) {
+        logger.error("CRW config is null.");
+        return {
+            ok: false,
+            reason: "CRW config not found."
+        };
+    }
+
+    const response = await fetch(crwConfig?.endpoint, {
         method: "POST",
         // TODO: read crw api key from storage
         headers: {
-            Authorization: `Bearer sk-GbIgzZMtFX9KTpg63jHRxe5EcjFnxqsSD6`,
+            Authorization: `Bearer ${crwConfig?.apiKey}`,
             "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -47,5 +92,5 @@ export async function CRWExtraction(url: string): Promise<Extraction> {
     }
 
     const data: CRWScrapeResult = await response.json();
-    return CRWtoExtraction(data);
+    return CRWtoExtraction(data, tabId);
 }

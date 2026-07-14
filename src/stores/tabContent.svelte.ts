@@ -1,6 +1,8 @@
 import { Extraction } from "@/types";
 
 // TODO: make it an array of Extractions
+// TODO: cache more tabs' content extraction
+// Maybe distinguish them by url
 let tabContent: Extraction | null = $state(null);
 
 export async function getLatestTabContent(tabId?: number) {
@@ -12,12 +14,11 @@ export async function getLatestTabContent(tabId?: number) {
     if (!curTabId) throw new Error("Invalid tabId");
 
     const content: Extraction = await browser.tabs.sendMessage(curTabId, {
-        type: "EXTRACT_PAGE_CONTENT"
+        type: "EXTRACT_PAGE_CONTENT",
+        tabId: curTabId
     });
 
-    // TEST: debug
-    logger.debug(content);
-
     tabContent = content;
+    // Q: getter function?
     return content;
 }
